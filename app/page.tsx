@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Calendar } from "@/components/ui/calendar"
@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/drawer"
 import { Input } from "@/components/ui/input"
 import { motion, AnimatePresence } from "framer-motion"
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from "recharts"
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Rectangle, Cell } from "recharts"
 import {
   CalendarIcon,
   Github,
@@ -44,6 +44,8 @@ import {
   SkipBack,
   SkipForward,
   Volume2,
+  Instagram,
+  BookOpen,
 } from "lucide-react"
 
 type AppState = "boot-logs" | "boot-screen" | "terminal" | "gui" | "opening-social" | "cnos-xp"
@@ -105,7 +107,7 @@ const socialLinks = {
 const commands = {
   help: `Available commands:
   help      - Show this help message
-  about     - Display information about John Doe
+  about     - Display information about Chris Nikhil
   education - Show educational background
   jobs      - Display work experience
   projects  - List available projects
@@ -267,65 +269,73 @@ const projectsData = [
 ]
 
 const galleryImages = [
-  { id: 1, name: "Project Screenshot 1", type: "screenshot", emoji: "🖥️" },
-  { id: 2, name: "Neural Network Diagram", type: "diagram", emoji: "🧠" },
-  { id: 3, name: "Architecture Design", type: "design", emoji: "🏗️" },
-  { id: 4, name: "Code Visualization", type: "code", emoji: "💻" },
-  { id: 5, name: "Data Flow Chart", type: "chart", emoji: "📊" },
-  { id: 6, name: "UI Mockup", type: "mockup", emoji: "🎨" },
-  { id: 7, name: "System Overview", type: "system", emoji: "⚙️" },
-  { id: 8, name: "Performance Graph", type: "graph", emoji: "📈" },
+  { 
+    id: 1, 
+    name: "Neo's Choice", 
+    type: "scene", 
+    emoji: "💊",
+    src: "/neo red pill blue pill.jpg",
+    description: "The iconic red pill, blue pill scene from The Matrix"
+  },
+  { 
+    id: 2, 
+    name: "Matrix Reloaded", 
+    type: "scene", 
+    emoji: "🎬",
+    src: "/the-matrix-reloaded.jpg",
+    description: "A scene from The Matrix Reloaded"
+  },
+  { 
+    id: 3, 
+    name: "Trinity", 
+    type: "character", 
+    emoji: "👩",
+    src: "/trinity-133811311.jpg",
+    description: "Trinity in action"
+  },
+  { 
+    id: 4, 
+    name: "Neo Returns", 
+    type: "promo", 
+    emoji: "🕶️",
+    src: "/1200x627-new-matrix-movie-announced-with-keanu-reeves-returning-as-neo-1566337894945.jpg",
+    description: "Neo's return in the new Matrix movie"
+  },
+  { 
+    id: 5, 
+    name: "The Matrix Code", 
+    type: "visual", 
+    emoji: "💻",
+    src: "/matrix.jpg",
+    description: "The iconic green digital rain effect"
+  }
 ]
 
 const musicTracks = [
   { 
     id: 1, 
-    title: "Hot Together", 
-    artist: "CNOS Audio", 
-    duration: "3:45", 
+    title: "Cold Heart (PNAU Remix)", 
+    artist: "Elton John & Dua Lipa", 
+    duration: "3:22", 
     emoji: "🎵",
-    audioSrc: "/music/hottogether.mp3"
+    audioSrc: "/music/Elton John, Dua Lipa - Cold Heart (PNAU Remix) (Official Video).mp3"
   },
   { 
     id: 2, 
-    title: "Hot Together (Remix)", 
-    artist: "Neural Beats", 
-    duration: "4:12", 
-    emoji: "🎶",
-    audioSrc: "/music/hottogether.mp3"
+    title: "Future Days", 
+    artist: "Pearl Jam", 
+    duration: "4:22", 
+    emoji: "🎸",
+    audioSrc: "/music/Pearl Jam - Future Days (Official Audio).mp3"
   },
   { 
     id: 3, 
-    title: "Hot Together (Extended)", 
-    artist: "Binary Orchestra", 
-    duration: "5:23", 
-    emoji: "🎼",
-    audioSrc: "/music/hottogether.mp3"
-  },
-  { 
-    id: 4, 
-    title: "Hot Together (Ambient)", 
-    artist: "System Sounds", 
-    duration: "3:58", 
+    title: "Hot Together", 
+    artist: "Pointer Sisters", 
+    duration: "3:45", 
     emoji: "🎧",
     audioSrc: "/music/hottogether.mp3"
-  },
-  { 
-    id: 5, 
-    title: "Hot Together (Chill)", 
-    artist: "Data Stream", 
-    duration: "4:35", 
-    emoji: "🎤",
-    audioSrc: "/music/hottogether.mp3"
-  },
-  { 
-    id: 6, 
-    title: "Hot Together (Acoustic)", 
-    artist: "Cyber Collective", 
-    duration: "3:21", 
-    emoji: "🎸",
-    audioSrc: "/music/hottogether.mp3"
-  },
+  }
 ]
 
 export default function Component() {
@@ -354,6 +364,9 @@ export default function Component() {
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null)
   const [duration, setDuration] = useState<number>(0)
   const [isLoading, setIsLoading] = useState(false)
+  const playlistRef = useRef<HTMLDivElement>(null)
+  const [scrollPosition, setScrollPosition] = useState(0)
+  const [hoveredBarIndex, setHoveredBarIndex] = useState<number | null>(null)
 
   useEffect(() => {
     const cursorInterval = setInterval(() => {
@@ -402,7 +415,7 @@ export default function Component() {
     if (appState === "boot-screen") {
       const timer = setTimeout(() => {
         setAppState("terminal")
-        setTerminalHistory(["Welcome to CNOS Terminal", "Type 'help' for available commands.", ""])
+        setTerminalHistory(["Welcome to CNOS Terminal", "Type 'help' for available commands.","Type 'cnos' to launch cnos xp","Type 'gui' for a gui portfolio", ""])
       }, 4000)
       return () => clearTimeout(timer)
     }
@@ -503,7 +516,6 @@ export default function Component() {
       calculator: { width: 350, height: 500 },
       gallery: { width: 800, height: 600 },
       music: { width: 500, height: 650 },
-      notepad: { width: 700, height: 500 },
       portfolio: { width: 600, height: 450 },
       resume: { width: 550, height: 400 },
       terminal: { width: 650, height: 450 },
@@ -559,7 +571,6 @@ export default function Component() {
       terminal: "Terminal - CNOS XP",
       settings: "Settings - CNOS XP",
       calculator: "Calculator - CNOS XP",
-      notepad: "Notepad - CNOS XP",
       gallery: "Gallery - CNOS XP",
       music: "Music Player - CNOS XP",
     }
@@ -690,15 +701,6 @@ export default function Component() {
           </motion.div>
           <motion.div
             className="flex flex-col items-center cursor-pointer hover:bg-green-400/10 p-2 rounded"
-            onDoubleClick={() => openWindow("notepad")}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-          >
-            <FileText className="w-8 h-8 mb-1" />
-            <span className="text-xs text-center">Notepad</span>
-          </motion.div>
-          <motion.div
-            className="flex flex-col items-center cursor-pointer hover:bg-green-400/10 p-2 rounded"
             onDoubleClick={() => openWindow("gallery")}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
@@ -723,7 +725,7 @@ export default function Component() {
           .map((window) => (
             <div
               key={window.id}
-              className="absolute bg-black/95 border-2 border-green-400 rounded-lg shadow-2xl overflow-hidden"
+              className="absolute bg-black/95 border-2 border-green-400 rounded-lg shadow-2xl"
               style={{
                 top: window.position.y,
                 left: window.position.x,
@@ -734,15 +736,22 @@ export default function Component() {
                 opacity: 1,
                 transition: "all 0.3s ease-out",
               }}
-              onClick={() => bringToFront(window.id)}
+              onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                  bringToFront(window.id)
+                }
+              }}
             >
               {/* Window Title Bar */}
-              <div className="bg-green-400/20 border-b border-green-400 p-2 flex justify-between items-center cursor-move">
+              <div 
+                className="bg-green-400/20 border-b border-green-400 p-2 flex justify-between items-center cursor-move"
+                onMouseDown={(e) => e.stopPropagation()}
+              >
                 <span className="text-green-300 font-bold text-sm">{window.title}</span>
                 <div className="flex space-x-1">
                   <AnimatedButton
                     className="w-6 h-6 bg-green-400/20 border border-green-400 rounded flex items-center justify-center text-green-400"
-                    onClick={(e: React.MouseEvent) => {
+                    onClick={(e) => {
                       e.stopPropagation()
                       minimizeWindow(window.id)
                     }}
@@ -751,7 +760,7 @@ export default function Component() {
                   </AnimatedButton>
                   <AnimatedButton
                     className="w-6 h-6 bg-green-400/20 border border-green-400 rounded flex items-center justify-center text-green-400"
-                    onClick={(e: React.MouseEvent) => {
+                    onClick={(e) => {
                       e.stopPropagation()
                       maximizeWindow(window.id)
                     }}
@@ -760,7 +769,7 @@ export default function Component() {
                   </AnimatedButton>
                   <AnimatedButton
                     className="w-6 h-6 bg-red-500/20 border border-red-400 rounded flex items-center justify-center text-red-400"
-                    onClick={(e: React.MouseEvent) => {
+                    onClick={(e) => {
                       e.stopPropagation()
                       closeWindow(window.id)
                     }}
@@ -771,7 +780,10 @@ export default function Component() {
               </div>
 
               {/* Window Content */}
-              <div className="h-full overflow-hidden flex flex-col" style={{ height: "calc(100% - 40px)" }}>
+              <div 
+                className="h-[calc(100%-40px)] flex flex-col"
+                onMouseDown={(e) => e.stopPropagation()}
+              >
                 {window.id === "calculator" && (
                   <div className="p-4 flex flex-col h-full">
                     <div className="bg-black border-2 border-green-400 p-4 text-right text-2xl font-mono mb-4 rounded min-h-[60px] flex items-center justify-end">
@@ -832,20 +844,54 @@ export default function Component() {
                     <div className="flex-1">
                       <h3 className="text-green-300 font-bold mb-4">Preview</h3>
                       {selectedImage ? (
-                        <div className="border-2 border-green-400 rounded p-8 h-4/5 flex items-center justify-center">
-                          <div className="text-center">
-                            <motion.div
-                              className="text-8xl mb-4"
-                              animate={{ rotate: [0, 5, -5, 0] }}
-                              transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
-                            >
-                              {galleryImages.find((img) => img.id === selectedImage)?.emoji}
-                            </motion.div>
-                            <div className="text-lg font-bold">
-                              {galleryImages.find((img) => img.id === selectedImage)?.name}
+                        <div className="border-2 border-green-400 rounded p-4 h-4/5 flex flex-col">
+                          <div className="flex-1 relative bg-black/50 rounded overflow-hidden">
+                            <img
+                              src={galleryImages.find((img) => img.id === selectedImage)?.src}
+                              alt={galleryImages.find((img) => img.id === selectedImage)?.name}
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                          <div className="mt-4 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <div className="text-lg font-bold">
+                                {galleryImages.find((img) => img.id === selectedImage)?.name}
+                              </div>
+                              <Badge variant="outline" className="border-green-400 text-green-400">
+                                {galleryImages.find((img) => img.id === selectedImage)?.type}
+                              </Badge>
                             </div>
-                            <div className="text-sm text-green-400/70">
-                              Type: {galleryImages.find((img) => img.id === selectedImage)?.type}
+                            <p className="text-sm text-green-400/70">
+                              {galleryImages.find((img) => img.id === selectedImage)?.description}
+                            </p>
+                            <div className="flex justify-end space-x-2">
+                              <AnimatedButton
+                                className="bg-green-400/20 border border-green-400 px-3 py-1 rounded text-sm"
+                                onClick={() => {
+                                  const img = galleryImages.find((img) => img.id === selectedImage)
+                                  if (img && typeof window !== 'undefined') {
+                                    globalThis.window.open(img.src, '_blank')
+                                  }
+                                }}
+                              >
+                                Open Full Size
+                              </AnimatedButton>
+                              <AnimatedButton
+                                className="bg-green-400/20 border border-green-400 px-3 py-1 rounded text-sm"
+                                onClick={() => {
+                                  const img = galleryImages.find((img) => img.id === selectedImage)
+                                  if (img) {
+                                    const a = document.createElement('a')
+                                    a.href = img.src
+                                    a.download = img.name.toLowerCase().replace(/\s+/g, '-') + '.' + img.src.split('.').pop()
+                                    document.body.appendChild(a)
+                                    a.click()
+                                    document.body.removeChild(a)
+                                  }
+                                }}
+                              >
+                                Download
+                              </AnimatedButton>
                             </div>
                           </div>
                         </div>
@@ -859,8 +905,8 @@ export default function Component() {
                 )}
 
                 {window.id === "music" && (
-                  <div className="p-4 h-full flex flex-col gap-4">
-                    <div className="bg-green-400/10 border-2 border-green-400 rounded p-4">
+                  <div className="p-4 h-full flex flex-col gap-4" style={{ height: "calc(100% - 40px)" }}>
+                    <div className="bg-green-400/10 border-2 border-green-400 rounded p-4 flex-shrink-0">
                       <div className="text-center mb-4">
                         <motion.div
                           className="text-4xl mb-2"
@@ -926,16 +972,34 @@ export default function Component() {
                         <span className="text-sm">{volume}%</span>
                       </div>
                     </div>
-                    <div className="flex-1 border border-green-400 rounded p-3 overflow-hidden">
-                      <h3 className="text-green-300 font-bold mb-3">Playlist</h3>
-                      <div className="space-y-1 h-full overflow-y-auto">
+                    <div className="flex-1 min-h-0 border border-green-400 rounded p-3 flex flex-col">
+                      <h3 className="text-green-300 font-bold mb-3 flex-shrink-0">Playlist</h3>
+                      <div 
+                        ref={playlistRef}
+                        className="flex-1 overflow-y-auto custom-scrollbar pr-2"
+                        style={{ 
+                          scrollBehavior: 'smooth',
+                          WebkitOverflowScrolling: 'touch'
+                        }}
+                        onWheel={(e) => {
+                          e.stopPropagation()
+                        }}
+                        onTouchMove={(e) => {
+                          e.stopPropagation()
+                        }}
+                      >
                         {musicTracks.map((track, index) => (
                           <motion.div
                             key={track.id}
-                            className={`p-2 rounded cursor-pointer transition-colors ${
+                            className={`p-2 rounded cursor-pointer transition-colors mb-1 ${
                               currentTrack === index ? "bg-green-400/30" : "bg-green-400/10"
                             } ${isLoading && currentTrack === index ? "opacity-50" : ""}`}
-                            onClick={() => !isLoading && setCurrentTrack(index)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (!isLoading) {
+                                setCurrentTrack(index)
+                              }
+                            }}
                             whileHover={{ scale: 1.02, backgroundColor: "rgba(74, 222, 128, 0.2)" }}
                             whileTap={{ scale: 0.98 }}
                           >
@@ -947,7 +1011,7 @@ export default function Component() {
                                   <div className="text-xs text-green-400/70 truncate">{track.artist}</div>
                                 </div>
                               </div>
-                              <div className="text-xs text-green-400/50 ml-2">{track.duration}</div>
+                              <div className="text-xs text-green-400/50 ml-2 flex-shrink-0">{track.duration}</div>
                             </div>
                           </motion.div>
                         ))}
@@ -958,7 +1022,7 @@ export default function Component() {
 
                 {window.id === "portfolio" && (
                   <div className="p-4 space-y-4 overflow-y-auto h-full">
-                    <h2 className="text-green-300 text-lg font-bold">John Doe - Portfolio</h2>
+                    <h2 className="text-green-300 text-lg font-bold">Chris Nikhil - Portfolio</h2>
                     <p className="text-sm">Full Stack Developer & AI Specialist</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
@@ -1078,43 +1142,6 @@ export default function Component() {
                         <span>15%</span>
                       </div>
                     </div>
-                  </div>
-                )}
-
-                {window.id === "notepad" && (
-                  <div className="p-4 h-full flex flex-col overflow-hidden">
-                    <h2 className="text-green-300 text-lg font-bold mb-4">Notepad</h2>
-                    <textarea
-                      className="flex-1 bg-black border-2 border-green-400 p-3 text-green-400 font-mono resize-none rounded focus:outline-none focus:border-green-300 overflow-y-auto"
-                      placeholder="Start typing..."
-                      defaultValue={`Welcome to CNOS Notepad!
-
-This is a simple text editor built into the CNOS XP operating system.
-
-You can use this to:
-- Take notes
-- Write code
-- Draft documents
-- Store temporary text
-
-Features:
-✓ Monospace font for code
-✓ Green terminal theme
-✓ Auto-resize text area
-✓ Persistent text (coming soon)
-✓ Syntax highlighting (coming soon)
-✓ File operations (coming soon)
-
-Current Projects:
-1. Neural Network Visualizer
-2. Blockchain Analytics Dashboard
-3. AI-Powered Code Assistant
-
-TODO:
-- Implement file save/load
-- Add syntax highlighting
-- Create plugin system`}
-                    />
                   </div>
                 )}
               </div>
@@ -1246,6 +1273,26 @@ TODO:
     const seconds = Math.floor(time % 60)
     return `${minutes}:${seconds.toString().padStart(2, '0')}`
   }
+
+  // Add this new useEffect to handle scroll position
+  useEffect(() => {
+    const playlist = playlistRef.current
+    if (!playlist) return
+
+    const handleScroll = () => {
+      setScrollPosition(playlist.scrollTop)
+    }
+
+    playlist.addEventListener('scroll', handleScroll)
+    return () => playlist.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  // Add this useEffect to restore scroll position
+  useEffect(() => {
+    const playlist = playlistRef.current
+    if (!playlist) return
+    playlist.scrollTop = scrollPosition
+  }, [currentTrack, isPlaying, volume]) // Only restore scroll on these specific state changes
 
   if (appState === "cnos-xp") {
     return <CNOSDesktop />
@@ -1473,6 +1520,7 @@ TODO:
                     <Button
                       variant="ghost"
                       className="w-full justify-start bg-black/80 border border-green-400 text-green-400 hover:bg-green-400/20 hover:text-green-300"
+                      onClick={() => window.open(socialLinks.github, '_blank')}
                     >
                       <Github className="mr-2 h-4 w-4" />
                       GitHub
@@ -1480,6 +1528,7 @@ TODO:
                     <Button
                       variant="ghost"
                       className="w-full justify-start bg-black/80 border border-green-400 text-green-400 hover:bg-green-400/20 hover:text-green-300"
+                      onClick={() => window.open(socialLinks.linkedin, '_blank')}
                     >
                       <Linkedin className="mr-2 h-4 w-4" />
                       LinkedIn
@@ -1487,9 +1536,26 @@ TODO:
                     <Button
                       variant="ghost"
                       className="w-full justify-start bg-black/80 border border-green-400 text-green-400 hover:bg-green-400/20 hover:text-green-300"
+                      onClick={() => window.open(socialLinks.instagram, '_blank')}
+                    >
+                      <Instagram className="mr-2 h-4 w-4" />
+                      Instagram
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start bg-black/80 border border-green-400 text-green-400 hover:bg-green-400/20 hover:text-green-300"
+                      onClick={() => window.open(socialLinks.duolingo, '_blank')}
+                    >
+                      <BookOpen className="mr-2 h-4 w-4" />
+                      Duolingo
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start bg-black/80 border border-green-400 text-green-400 hover:bg-green-400/20 hover:text-green-300"
+                      onClick={() => window.open('mailto:chrsnikhil@gmail.com')}
                     >
                       <Mail className="mr-2 h-4 w-4" />
-                      Contact
+                      Email
                     </Button>
                   </div>
                   <DrawerFooter>
@@ -1515,7 +1581,7 @@ TODO:
         <div className="container mx-auto px-4 py-8 space-y-12">
           {/* About Section */}
           <motion.section initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }}>
-            <Card className="bg-black/50 border-green-400/30 text-green-400">
+            <Card className="bg-black/50 border-green-400/30 text-green-400 hover:bg-green-950/50 transition-colors duration-200">
               <CardHeader>
                 <CardTitle className="text-green-300">About Me</CardTitle>
               </CardHeader>
@@ -1536,7 +1602,7 @@ TODO:
 
           {/* Skills Chart */}
           <motion.section initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.4 }}>
-            <Card className="bg-black/50 border-green-400/30 text-green-400">
+            <Card className="bg-black/50 border-green-400/30 text-green-400 hover:bg-green-950/50 transition-colors duration-200">
               <CardHeader>
                 <CardTitle className="text-green-300">Technical Skills</CardTitle>
                 <CardDescription className="text-green-400/70">Proficiency levels in key technologies</CardDescription>
@@ -1552,11 +1618,34 @@ TODO:
                   className="h-[300px]"
                 >
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={skillsData}>
+                    <BarChart 
+                      data={skillsData}
+                      onMouseMove={(state: any) => {
+                        if (state.isTooltipActive) {
+                          setHoveredBarIndex(state.activeTooltipIndex)
+                        } else {
+                          setHoveredBarIndex(null)
+                        }
+                      }}
+                      onMouseLeave={() => setHoveredBarIndex(null)}
+                    >
                       <XAxis dataKey="name" tick={{ fill: "#4ade80", fontSize: 12 }} />
-                      <YAxis tick={{ fill: "#4ade80", fontSize: 12 }} />
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                      <Bar dataKey="level" fill="#4ade80" />
+                      <YAxis tick={{ fill: "#4ade80", fontSize: 14, fontWeight: 700 }} />
+                      <ChartTooltip 
+                        content={<ChartTooltipContent className="bg-black/80 border-green-400/30 text-green-400" />} 
+                        cursor={false} // Disable default tooltip cursor
+                      />
+                      <Bar dataKey="level">
+                         {skillsData.map((entry, index) => (
+                          <Cell 
+                            key={`cell-${index}`}
+                            fill={hoveredBarIndex === index ? 'rgba(16, 185, 129, 0.8)' : '#4ade80'}
+                            stroke={hoveredBarIndex === index ? '#10b981' : '#222'}
+                            strokeWidth={hoveredBarIndex === index ? 2 : 0}
+                            style={{ outline: 'none' }}
+                          />
+                        ))}
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </ChartContainer>
@@ -1576,7 +1665,7 @@ TODO:
                   <CarouselContent className="-ml-2 md:-ml-4">
                     {projectsData.map((project, index) => (
                       <CarouselItem key={index} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/3">
-                        <Card className="bg-black/30 border-green-400/20 text-green-400 h-full">
+                        <Card className="bg-black/30 border-green-400/20 text-green-400 h-full hover:bg-green-950/50 transition-colors duration-200">
                           <CardHeader>
                             <div className="text-4xl mb-2">{project.image}</div>
                             <CardTitle className="text-green-300 text-lg">{project.title}</CardTitle>
@@ -1619,7 +1708,7 @@ TODO:
           {/* Calendar & Contact */}
           <motion.section initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.8 }}>
             <div className="grid md:grid-cols-2 gap-6">
-              <Card className="bg-black/50 border-green-400/30 text-green-400">
+              <Card className="bg-black/50 border-green-400/30 text-green-400 hover:bg-green-950/50 transition-colors duration-200">
                 <CardHeader>
                   <CardTitle className="text-green-300 flex items-center">
                     <CalendarIcon className="mr-2 h-5 w-5" />
@@ -1667,7 +1756,7 @@ TODO:
                 </CardContent>
               </Card>
 
-              <Card className="bg-black/50 border-green-400/30 text-green-400">
+              <Card className="bg-black/50 border-green-400/30 text-green-400 hover:bg-green-950/50 transition-colors duration-200">
                 <CardHeader>
                   <CardTitle className="text-green-300">Get In Touch</CardTitle>
                   <CardDescription className="text-green-400/70">
@@ -1716,3 +1805,24 @@ TODO:
     </div>
   )
 }
+
+// Add this CSS class to your global styles or component
+const customScrollbarStyles = `
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(74, 222, 128, 0.1);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(74, 222, 128, 0.3);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(74, 222, 128, 0.4);
+}
+`
