@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import type { MouseEvent, WheelEvent, TouchEvent } from "react"
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
@@ -318,7 +319,7 @@ const musicTracks = [
     artist: "Elton John & Dua Lipa", 
     duration: "3:22", 
     emoji: "🎵",
-    audioSrc: "/music/Elton John, Dua Lipa - Cold Heart (PNAU Remix) (Official Video).mp3"
+    audioSrc: "/music/cold.mp3"
   },
   { 
     id: 2, 
@@ -504,7 +505,8 @@ export default function Component() {
     }
   }
 
-  const openWindow = (windowId: string) => {
+  // Memoize openWindow to prevent unnecessary re-renders
+  const openWindow = useCallback((windowId: string) => {
     const existingWindow = windows.find((w) => w.id === windowId)
     if (existingWindow) {
       setWindows((prev) => prev.map((w) => (w.id === windowId ? { ...w, zIndex: nextZIndex, isMinimized: false } : w)))
@@ -534,7 +536,7 @@ export default function Component() {
 
     setWindows((prev) => [...prev, newWindow])
     setNextZIndex((prev) => prev + 1)
-  }
+  }, [windows, nextZIndex])
 
   const closeWindow = (windowId: string) => {
     setWindows((prev) => prev.filter((w) => w.id !== windowId))
@@ -656,7 +658,7 @@ export default function Component() {
         <div className="flex-1 p-4 grid grid-cols-8 gap-4 content-start">
           <motion.div
             className="flex flex-col items-center cursor-pointer hover:bg-green-400/10 p-2 rounded"
-            onDoubleClick={() => openWindow("portfolio")}
+            onDoubleClick={handlePortfolioDoubleClick}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
           >
@@ -665,7 +667,7 @@ export default function Component() {
           </motion.div>
           <motion.div
             className="flex flex-col items-center cursor-pointer hover:bg-green-400/10 p-2 rounded"
-            onDoubleClick={() => openWindow("resume")}
+            onDoubleClick={handleResumeDoubleClick}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
           >
@@ -674,7 +676,7 @@ export default function Component() {
           </motion.div>
           <motion.div
             className="flex flex-col items-center cursor-pointer hover:bg-green-400/10 p-2 rounded"
-            onDoubleClick={() => openWindow("terminal")}
+            onDoubleClick={handleTerminalDoubleClick}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
           >
@@ -683,7 +685,7 @@ export default function Component() {
           </motion.div>
           <motion.div
             className="flex flex-col items-center cursor-pointer hover:bg-green-400/10 p-2 rounded"
-            onDoubleClick={() => openWindow("settings")}
+            onDoubleClick={handleSettingsDoubleClick}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
           >
@@ -692,7 +694,7 @@ export default function Component() {
           </motion.div>
           <motion.div
             className="flex flex-col items-center cursor-pointer hover:bg-green-400/10 p-2 rounded"
-            onDoubleClick={() => openWindow("calculator")}
+            onDoubleClick={handleCalculatorDoubleClick}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
           >
@@ -701,7 +703,7 @@ export default function Component() {
           </motion.div>
           <motion.div
             className="flex flex-col items-center cursor-pointer hover:bg-green-400/10 p-2 rounded"
-            onDoubleClick={() => openWindow("gallery")}
+            onDoubleClick={handleGalleryDoubleClick}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
           >
@@ -710,7 +712,7 @@ export default function Component() {
           </motion.div>
           <motion.div
             className="flex flex-col items-center cursor-pointer hover:bg-green-400/10 p-2 rounded"
-            onDoubleClick={() => openWindow("music")}
+            onDoubleClick={handleMusicDoubleClick}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
           >
@@ -736,22 +738,18 @@ export default function Component() {
                 opacity: 1,
                 transition: "all 0.3s ease-out",
               }}
-              onClick={(e) => {
-                if (e.target === e.currentTarget) {
-                  bringToFront(window.id)
-                }
-              }}
+              onClick={(e) => handleWindowClick(e, window.id)}
             >
               {/* Window Title Bar */}
               <div 
                 className="bg-green-400/20 border-b border-green-400 p-2 flex justify-between items-center cursor-move"
-                onMouseDown={(e) => e.stopPropagation()}
+                onMouseDown={(e: React.MouseEvent) => e.stopPropagation()}
               >
                 <span className="text-green-300 font-bold text-sm">{window.title}</span>
                 <div className="flex space-x-1">
                   <AnimatedButton
                     className="w-6 h-6 bg-green-400/20 border border-green-400 rounded flex items-center justify-center text-green-400"
-                    onClick={(e) => {
+                    onClick={(e: React.MouseEvent) => {
                       e.stopPropagation()
                       minimizeWindow(window.id)
                     }}
@@ -760,7 +758,7 @@ export default function Component() {
                   </AnimatedButton>
                   <AnimatedButton
                     className="w-6 h-6 bg-green-400/20 border border-green-400 rounded flex items-center justify-center text-green-400"
-                    onClick={(e) => {
+                    onClick={(e: React.MouseEvent) => {
                       e.stopPropagation()
                       maximizeWindow(window.id)
                     }}
@@ -769,7 +767,7 @@ export default function Component() {
                   </AnimatedButton>
                   <AnimatedButton
                     className="w-6 h-6 bg-red-500/20 border border-red-400 rounded flex items-center justify-center text-red-400"
-                    onClick={(e) => {
+                    onClick={(e: React.MouseEvent) => {
                       e.stopPropagation()
                       closeWindow(window.id)
                     }}
@@ -782,7 +780,7 @@ export default function Component() {
               {/* Window Content */}
               <div 
                 className="h-[calc(100%-40px)] flex flex-col"
-                onMouseDown={(e) => e.stopPropagation()}
+                onMouseDown={(e: React.MouseEvent) => e.stopPropagation()}
               >
                 {window.id === "calculator" && (
                   <div className="p-4 flex flex-col h-full">
@@ -867,7 +865,7 @@ export default function Component() {
                             <div className="flex justify-end space-x-2">
                               <AnimatedButton
                                 className="bg-green-400/20 border border-green-400 px-3 py-1 rounded text-sm"
-                                onClick={() => {
+                                onClick={(e: React.MouseEvent) => {
                                   const img = galleryImages.find((img) => img.id === selectedImage)
                                   if (img && typeof window !== 'undefined') {
                                     globalThis.window.open(img.src, '_blank')
@@ -878,7 +876,7 @@ export default function Component() {
                               </AnimatedButton>
                               <AnimatedButton
                                 className="bg-green-400/20 border border-green-400 px-3 py-1 rounded text-sm"
-                                onClick={() => {
+                                onClick={(e: React.MouseEvent) => {
                                   const img = galleryImages.find((img) => img.id === selectedImage)
                                   if (img) {
                                     const a = document.createElement('a')
@@ -933,14 +931,14 @@ export default function Component() {
                       <div className="flex justify-center items-center space-x-4 mb-4">
                         <AnimatedButton
                           className="bg-green-400/20 border border-green-400 p-2 rounded"
-                          onClick={() => setCurrentTrack((prev) => (prev > 0 ? prev - 1 : musicTracks.length - 1))}
+                          onClick={(e: React.MouseEvent) => setCurrentTrack((prev) => (prev > 0 ? prev - 1 : musicTracks.length - 1))}
                           disabled={isLoading}
                         >
                           <SkipBack className="w-4 h-4" />
                         </AnimatedButton>
                         <AnimatedButton
                           className="bg-green-400/20 border border-green-400 p-3 rounded"
-                          onClick={() => setIsPlaying(!isPlaying)}
+                          onClick={(e: React.MouseEvent) => setIsPlaying(!isPlaying)}
                           disabled={isLoading}
                         >
                           {isLoading ? (
@@ -953,7 +951,7 @@ export default function Component() {
                         </AnimatedButton>
                         <AnimatedButton
                           className="bg-green-400/20 border border-green-400 p-2 rounded"
-                          onClick={() => setCurrentTrack((prev) => (prev < musicTracks.length - 1 ? prev + 1 : 0))}
+                          onClick={(e: React.MouseEvent) => setCurrentTrack((prev) => (prev < musicTracks.length - 1 ? prev + 1 : 0))}
                           disabled={isLoading}
                         >
                           <SkipForward className="w-4 h-4" />
@@ -981,10 +979,10 @@ export default function Component() {
                           scrollBehavior: 'smooth',
                           WebkitOverflowScrolling: 'touch'
                         }}
-                        onWheel={(e) => {
+                        onWheel={(e: React.WheelEvent) => {
                           e.stopPropagation()
                         }}
-                        onTouchMove={(e) => {
+                        onTouchMove={(e: React.TouchEvent) => {
                           e.stopPropagation()
                         }}
                       >
@@ -994,7 +992,7 @@ export default function Component() {
                             className={`p-2 rounded cursor-pointer transition-colors mb-1 ${
                               currentTrack === index ? "bg-green-400/30" : "bg-green-400/10"
                             } ${isLoading && currentTrack === index ? "opacity-50" : ""}`}
-                            onClick={(e) => {
+                            onClick={(e: React.MouseEvent) => {
                               e.stopPropagation()
                               if (!isLoading) {
                                 setCurrentTrack(index)
@@ -1058,7 +1056,7 @@ export default function Component() {
                     <h2 className="text-green-300 text-lg font-bold">Resume</h2>
                     <AnimatedButton
                       className="bg-green-400/20 border border-green-400 px-4 py-2 rounded w-full text-green-400"
-                      onClick={downloadResume}
+                      onClick={(e: React.MouseEvent) => downloadResume()}
                     >
                       📄 Download Resume
                     </AnimatedButton>
@@ -1087,7 +1085,7 @@ export default function Component() {
                     <h2 className="text-green-300 text-lg font-bold">CNOS Terminal</h2>
                     <AnimatedButton
                       className="bg-green-400/20 border border-green-400 px-4 py-2 rounded w-full text-green-400"
-                      onClick={() => setAppState("terminal")}
+                      onClick={(e: React.MouseEvent) => setAppState("terminal")}
                     >
                       🖥️ Open Full Terminal
                     </AnimatedButton>
@@ -1153,7 +1151,7 @@ export default function Component() {
           <div className="flex items-center space-x-4">
             <AnimatedButton
               className="bg-green-400/30 border border-green-400 px-4 py-1 rounded font-bold text-green-400"
-              onClick={() => setAppState("terminal")}
+              onClick={(e: React.MouseEvent) => setAppState("terminal")}
             >
               Start
             </AnimatedButton>
@@ -1163,7 +1161,7 @@ export default function Component() {
                 className={`border border-green-400 px-3 py-1 rounded text-sm text-green-400 ${
                   window.isMinimized ? "bg-green-400/10" : "bg-green-400/20"
                 }`}
-                onClick={() => {
+                onClick={(e: React.MouseEvent) => {
                   if (window.isMinimized) {
                     setWindows((prev) =>
                       prev.map((w) => (w.id === window.id ? { ...w, isMinimized: false, zIndex: nextZIndex } : w)),
@@ -1293,6 +1291,73 @@ export default function Component() {
     if (!playlist) return
     playlist.scrollTop = scrollPosition
   }, [currentTrack, isPlaying, volume]) // Only restore scroll on these specific state changes
+
+  // Memoized double-click handlers for each icon
+  const handlePortfolioDoubleClick = useCallback(() => openWindow("portfolio"), [openWindow])
+  const handleResumeDoubleClick = useCallback(() => openWindow("resume"), [openWindow])
+  const handleTerminalDoubleClick = useCallback(() => openWindow("terminal"), [openWindow])
+  const handleSettingsDoubleClick = useCallback(() => openWindow("settings"), [openWindow])
+  const handleCalculatorDoubleClick = useCallback(() => openWindow("calculator"), [openWindow])
+  const handleGalleryDoubleClick = useCallback(() => openWindow("gallery"), [openWindow])
+  const handleMusicDoubleClick = useCallback(() => openWindow("music"), [openWindow])
+
+  // Memoized event handlers
+  const handleWindowClick = useCallback((e: MouseEvent<HTMLDivElement>, windowId: string) => {
+    if (e.target === e.currentTarget) {
+      bringToFront(windowId)
+    }
+  }, [bringToFront])
+
+  const handleMouseDown = useCallback((e: MouseEvent) => {
+    e.stopPropagation()
+  }, [])
+
+  const handleMinimizeClick = useCallback((e: MouseEvent, windowId: string) => {
+    e.stopPropagation()
+    minimizeWindow(windowId)
+  }, [minimizeWindow])
+
+  const handleMaximizeClick = useCallback((e: MouseEvent, windowId: string) => {
+    e.stopPropagation()
+    maximizeWindow(windowId)
+  }, [maximizeWindow])
+
+  const handleCloseClick = useCallback((e: MouseEvent, windowId: string) => {
+    e.stopPropagation()
+    closeWindow(windowId)
+  }, [closeWindow])
+
+  const handleWheel = useCallback((e: WheelEvent) => {
+    e.stopPropagation()
+  }, [])
+
+  const handleTouchMove = useCallback((e: TouchEvent) => {
+    e.stopPropagation()
+  }, [])
+
+  const handleTrackClick = useCallback((e: MouseEvent, index: number) => {
+    e.stopPropagation()
+    if (!isLoading) {
+      setCurrentTrack(index)
+    }
+  }, [isLoading])
+
+  const handleOpenImage = useCallback((e: MouseEvent, img: typeof galleryImages[0]) => {
+    if (img && typeof window !== 'undefined') {
+      globalThis.window.open(img.src, '_blank')
+    }
+  }, [])
+
+  const handleDownloadImage = useCallback((e: MouseEvent, img: typeof galleryImages[0]) => {
+    if (img) {
+      const a = document.createElement('a')
+      a.href = img.src
+      a.download = img.name.toLowerCase().replace(/\s+/g, '-') + '.' + img.src.split('.').pop()
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+    }
+  }, [])
 
   if (appState === "cnos-xp") {
     return <CNOSDesktop />
@@ -1520,7 +1585,7 @@ export default function Component() {
                     <Button
                       variant="ghost"
                       className="w-full justify-start bg-black/80 border border-green-400 text-green-400 hover:bg-green-400/20 hover:text-green-300"
-                      onClick={() => window.open(socialLinks.github, '_blank')}
+                      onClick={(e: React.MouseEvent) => window.open(socialLinks.github, '_blank')}
                     >
                       <Github className="mr-2 h-4 w-4" />
                       GitHub
@@ -1528,7 +1593,7 @@ export default function Component() {
                     <Button
                       variant="ghost"
                       className="w-full justify-start bg-black/80 border border-green-400 text-green-400 hover:bg-green-400/20 hover:text-green-300"
-                      onClick={() => window.open(socialLinks.linkedin, '_blank')}
+                      onClick={(e: React.MouseEvent) => window.open(socialLinks.linkedin, '_blank')}
                     >
                       <Linkedin className="mr-2 h-4 w-4" />
                       LinkedIn
@@ -1536,7 +1601,7 @@ export default function Component() {
                     <Button
                       variant="ghost"
                       className="w-full justify-start bg-black/80 border border-green-400 text-green-400 hover:bg-green-400/20 hover:text-green-300"
-                      onClick={() => window.open(socialLinks.instagram, '_blank')}
+                      onClick={(e: React.MouseEvent) => window.open(socialLinks.instagram, '_blank')}
                     >
                       <Instagram className="mr-2 h-4 w-4" />
                       Instagram
@@ -1544,7 +1609,7 @@ export default function Component() {
                     <Button
                       variant="ghost"
                       className="w-full justify-start bg-black/80 border border-green-400 text-green-400 hover:bg-green-400/20 hover:text-green-300"
-                      onClick={() => window.open(socialLinks.duolingo, '_blank')}
+                      onClick={(e: React.MouseEvent) => window.open(socialLinks.duolingo, '_blank')}
                     >
                       <BookOpen className="mr-2 h-4 w-4" />
                       Duolingo
@@ -1552,7 +1617,7 @@ export default function Component() {
                     <Button
                       variant="ghost"
                       className="w-full justify-start bg-black/80 border border-green-400 text-green-400 hover:bg-green-400/20 hover:text-green-300"
-                      onClick={() => window.open('mailto:chrsnikhil@gmail.com')}
+                      onClick={(e: React.MouseEvent) => window.open('mailto:chrsnikhil@gmail.com')}
                     >
                       <Mail className="mr-2 h-4 w-4" />
                       Email
@@ -1569,7 +1634,7 @@ export default function Component() {
               </Drawer>
               <Button
                 className="bg-black/80 border-2 border-green-400 text-green-400 hover:bg-green-400/20 hover:text-green-300 backdrop-blur-sm"
-                onClick={() => setAppState("terminal")}
+                onClick={(e: React.MouseEvent) => setAppState("terminal")}
               >
                 <Terminal className="mr-2 h-4 w-4" />
                 Terminal
@@ -1689,7 +1754,7 @@ export default function Component() {
                             <Button
                               size="sm"
                               className="bg-black/80 border-2 border-green-400 text-green-400 hover:bg-green-400/20 hover:text-green-300 w-full"
-                              onClick={() => window.open(project.link, '_blank')}
+                              onClick={(e: React.MouseEvent) => window.open(project.link, '_blank')}
                             >
                               View Project
                             </Button>
@@ -1779,7 +1844,7 @@ export default function Component() {
                     </Button>
                     <Button
                       className="w-full justify-start bg-black/80 border-2 border-green-400 text-green-400 hover:bg-green-400/20 hover:text-green-300"
-                      onClick={downloadResume}
+                      onClick={(e: React.MouseEvent) => downloadResume()}
                     >
                       <Download className="mr-2 h-4 w-4" />
                       Download Resume
