@@ -278,12 +278,54 @@ const galleryImages = [
 ]
 
 const musicTracks = [
-  { id: 1, title: "Cyberpunk Synthwave", artist: "CNOS Audio", duration: "3:45", emoji: "🎵" },
-  { id: 2, title: "Digital Dreams", artist: "Neural Beats", duration: "4:12", emoji: "🎶" },
-  { id: 3, title: "Code Symphony", artist: "Binary Orchestra", duration: "5:23", emoji: "🎼" },
-  { id: 4, title: "Terminal Vibes", artist: "System Sounds", duration: "3:58", emoji: "🎧" },
-  { id: 5, title: "Matrix Flow", artist: "Data Stream", duration: "4:35", emoji: "🎤" },
-  { id: 6, title: "Quantum Pulse", artist: "Cyber Collective", duration: "3:21", emoji: "🎸" },
+  { 
+    id: 1, 
+    title: "Hot Together", 
+    artist: "CNOS Audio", 
+    duration: "3:45", 
+    emoji: "🎵",
+    audioSrc: "/music/hottogether.mp3"
+  },
+  { 
+    id: 2, 
+    title: "Hot Together (Remix)", 
+    artist: "Neural Beats", 
+    duration: "4:12", 
+    emoji: "🎶",
+    audioSrc: "/music/hottogether.mp3"
+  },
+  { 
+    id: 3, 
+    title: "Hot Together (Extended)", 
+    artist: "Binary Orchestra", 
+    duration: "5:23", 
+    emoji: "🎼",
+    audioSrc: "/music/hottogether.mp3"
+  },
+  { 
+    id: 4, 
+    title: "Hot Together (Ambient)", 
+    artist: "System Sounds", 
+    duration: "3:58", 
+    emoji: "🎧",
+    audioSrc: "/music/hottogether.mp3"
+  },
+  { 
+    id: 5, 
+    title: "Hot Together (Chill)", 
+    artist: "Data Stream", 
+    duration: "4:35", 
+    emoji: "🎤",
+    audioSrc: "/music/hottogether.mp3"
+  },
+  { 
+    id: 6, 
+    title: "Hot Together (Acoustic)", 
+    artist: "Cyber Collective", 
+    duration: "3:21", 
+    emoji: "🎸",
+    audioSrc: "/music/hottogether.mp3"
+  },
 ]
 
 export default function Component() {
@@ -296,7 +338,8 @@ export default function Component() {
   const [showCursor, setShowCursor] = useState(true)
   const [currentSocial, setCurrentSocial] = useState("")
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
-  const [currentTime, setCurrentTime] = useState(new Date())
+  const [audioCurrentTime, setAudioCurrentTime] = useState<number>(0)
+  const [systemTime, setSystemTime] = useState<Date>(new Date())
   const [windows, setWindows] = useState<WindowState[]>([])
   const [nextZIndex, setNextZIndex] = useState(100)
   const [calculatorValue, setCalculatorValue] = useState("0")
@@ -308,6 +351,9 @@ export default function Component() {
   const [volume, setVolume] = useState(75)
   const terminalRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null)
+  const [duration, setDuration] = useState<number>(0)
+  const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
     const cursorInterval = setInterval(() => {
@@ -318,8 +364,7 @@ export default function Component() {
 
   useEffect(() => {
     const timeInterval = setInterval(() => {
-      setCurrentTime(new Date())
-      setSelectedDate(new Date())
+      setSystemTime(new Date())
     }, 1000)
     return () => clearInterval(timeInterval)
   }, [])
@@ -826,24 +871,44 @@ export default function Component() {
                         </motion.div>
                         <div className="text-lg font-bold">{musicTracks[currentTrack]?.title}</div>
                         <div className="text-sm text-green-400/70">{musicTracks[currentTrack]?.artist}</div>
-                        <div className="text-xs text-green-400/50">{musicTracks[currentTrack]?.duration}</div>
+                        <div className="text-xs text-green-400/50">
+                          {formatTime(audioCurrentTime)} / {formatTime(duration)}
+                        </div>
                       </div>
+                      
+                      {/* Progress bar */}
+                      <div className="w-full bg-green-400/20 h-1 rounded-full mb-4">
+                        <div 
+                          className="bg-green-400 h-full rounded-full transition-all duration-100"
+                          style={{ width: `${(audioCurrentTime / duration) * 100}%` }}
+                        />
+                      </div>
+
                       <div className="flex justify-center items-center space-x-4 mb-4">
                         <AnimatedButton
                           className="bg-green-400/20 border border-green-400 p-2 rounded"
                           onClick={() => setCurrentTrack((prev) => (prev > 0 ? prev - 1 : musicTracks.length - 1))}
+                          disabled={isLoading}
                         >
                           <SkipBack className="w-4 h-4" />
                         </AnimatedButton>
                         <AnimatedButton
                           className="bg-green-400/20 border border-green-400 p-3 rounded"
                           onClick={() => setIsPlaying(!isPlaying)}
+                          disabled={isLoading}
                         >
-                          {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+                          {isLoading ? (
+                            <div className="w-5 h-5 border-2 border-green-400 border-t-transparent rounded-full animate-spin" />
+                          ) : isPlaying ? (
+                            <Pause className="w-5 h-5" />
+                          ) : (
+                            <Play className="w-5 h-5" />
+                          )}
                         </AnimatedButton>
                         <AnimatedButton
                           className="bg-green-400/20 border border-green-400 p-2 rounded"
                           onClick={() => setCurrentTrack((prev) => (prev < musicTracks.length - 1 ? prev + 1 : 0))}
+                          disabled={isLoading}
                         >
                           <SkipForward className="w-4 h-4" />
                         </AnimatedButton>
@@ -869,8 +934,8 @@ export default function Component() {
                             key={track.id}
                             className={`p-2 rounded cursor-pointer transition-colors ${
                               currentTrack === index ? "bg-green-400/30" : "bg-green-400/10"
-                            }`}
-                            onClick={() => setCurrentTrack(index)}
+                            } ${isLoading && currentTrack === index ? "opacity-50" : ""}`}
+                            onClick={() => !isLoading && setCurrentTrack(index)}
                             whileHover={{ scale: 1.02, backgroundColor: "rgba(74, 222, 128, 0.2)" }}
                             whileTap={{ scale: 0.98 }}
                           >
@@ -982,7 +1047,10 @@ export default function Component() {
                       <div className="flex justify-between p-2 border border-green-400/30 rounded">
                         <span>🖥️ Resolution:</span>
                         <span>
-                          {typeof window !== 'undefined' ? `${window.innerWidth}x${window.innerHeight}` : 'Loading...'}
+                          {typeof globalThis.window !== 'undefined' 
+                            ? `${globalThis.window.innerWidth}x${globalThis.window.innerHeight}`
+                            : 'Loading...'
+                          }
                         </span>
                       </div>
                       <div className="flex justify-between p-2 border border-green-400/30 rounded">
@@ -995,11 +1063,11 @@ export default function Component() {
                       </div>
                       <div className="flex justify-between p-2 border border-green-400/30 rounded">
                         <span>🕒 System Time:</span>
-                        <span>{currentTime.toLocaleTimeString()}</span>
+                        <span>{systemTime.toLocaleTimeString()}</span>
                       </div>
                       <div className="flex justify-between p-2 border border-green-400/30 rounded">
                         <span>📅 Date:</span>
-                        <span>{currentTime.toLocaleDateString()}</span>
+                        <span>{systemTime.toLocaleDateString()}</span>
                       </div>
                       <div className="flex justify-between p-2 border border-green-400/30 rounded">
                         <span>💾 Memory Usage:</span>
@@ -1084,12 +1152,100 @@ TODO:
             ))}
           </div>
           <div className="text-sm">
-            {currentTime.toLocaleTimeString()} | {currentTime.toLocaleDateString()} | CNOS XP
+            {systemTime.toLocaleTimeString()} | {systemTime.toLocaleDateString()} | CNOS XP
           </div>
         </div>
       </div>
     </div>
   )
+
+  // Initialize audio element
+  useEffect(() => {
+    const audio = new Audio()
+    audio.preload = "auto"
+    setAudioElement(audio)
+
+    // Cleanup
+    return () => {
+      audio.pause()
+      audio.src = ""
+    }
+  }, [])
+
+  // Handle audio loading and playback
+  useEffect(() => {
+    if (!audioElement) return
+
+    const handleTimeUpdate = () => {
+      setAudioCurrentTime(audioElement.currentTime)
+    }
+
+    const handleLoadedMetadata = () => {
+      setDuration(audioElement.duration)
+      setIsLoading(false)
+    }
+
+    const handleEnded = () => {
+      setCurrentTrack((prev) => (prev < musicTracks.length - 1 ? prev + 1 : 0))
+    }
+
+    const handleError = (error: Event) => {
+      console.error("Error loading audio:", error)
+      setIsLoading(false)
+      const audioError = error.target as HTMLAudioElement
+      if (audioError.error) {
+        console.error("Audio error code:", audioError.error.code)
+        console.error("Audio error message:", audioError.error.message)
+      }
+    }
+
+    audioElement.addEventListener("timeupdate", handleTimeUpdate)
+    audioElement.addEventListener("loadedmetadata", handleLoadedMetadata)
+    audioElement.addEventListener("ended", handleEnded)
+    audioElement.addEventListener("error", handleError)
+
+    return () => {
+      audioElement.removeEventListener("timeupdate", handleTimeUpdate)
+      audioElement.removeEventListener("loadedmetadata", handleLoadedMetadata)
+      audioElement.removeEventListener("ended", handleEnded)
+      audioElement.removeEventListener("error", handleError)
+    }
+  }, [audioElement])
+
+  // Update audio source when track changes
+  useEffect(() => {
+    if (!audioElement) return
+
+    setIsLoading(true)
+    audioElement.src = musicTracks[currentTrack].audioSrc
+    if (isPlaying) {
+      audioElement.play().catch(console.error)
+    }
+  }, [currentTrack, audioElement])
+
+  // Handle play/pause
+  useEffect(() => {
+    if (!audioElement) return
+
+    if (isPlaying) {
+      audioElement.play().catch(console.error)
+    } else {
+      audioElement.pause()
+    }
+  }, [isPlaying, audioElement])
+
+  // Handle volume changes
+  useEffect(() => {
+    if (!audioElement) return
+    audioElement.volume = volume / 100
+  }, [volume, audioElement])
+
+  // Format time function
+  const formatTime = (time: number) => {
+    const minutes = Math.floor(time / 60)
+    const seconds = Math.floor(time % 60)
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`
+  }
 
   if (appState === "cnos-xp") {
     return <CNOSDesktop />
@@ -1467,7 +1623,7 @@ TODO:
                 <CardHeader>
                   <CardTitle className="text-green-300 flex items-center">
                     <CalendarIcon className="mr-2 h-5 w-5" />
-                    {currentTime.toLocaleDateString("en-US", {
+                    {systemTime.toLocaleDateString("en-US", {
                       weekday: "long",
                       year: "numeric",
                       month: "long",
